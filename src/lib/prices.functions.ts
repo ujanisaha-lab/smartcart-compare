@@ -8,8 +8,8 @@ const PRICE_TTL_MS = 6 * 60 * 60 * 1000; // shared across all users -> few live 
 const SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 
 function headers() {
-  const a = process.env.LOVABLE_API_KEY;
-  const b = process.env.FIRECRAWL_API_KEY;
+  const a = process.env["LOVABLE_API_KEY"];
+  const b = process.env["FIRECRAWL_API_KEY"];
   if (!a || !b) throw new Error("Price service is not configured");
   return { "Content-Type": "application/json", Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b };
 }
