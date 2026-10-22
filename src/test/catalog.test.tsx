@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { trendOf, triggeredOffers, PRODUCTS } from "@/lib/catalog";
+import { cleanTitle, trendOf, triggeredOffers } from "@/lib/catalog";
 
 describe("price tags", () => {
-  it("red/up when price rose", () => expect(trendOf({ storeId: "a", price: 110, previous: 100, inStock: true })).toBe("up"));
-  it("green/down when price fell", () => expect(trendOf({ storeId: "a", price: 90, previous: 100, inStock: true })).toBe("down"));
-  it("grey/new when no history", () => expect(trendOf({ storeId: "a", price: 90, previous: null, inStock: true })).toBe("new"));
+  it("red/up when price rose", () => expect(trendOf({ price: 110, previous: 100 })).toBe("up"));
+  it("green/down when price fell", () => expect(trendOf({ price: 90, previous: 100 })).toBe("down"));
+  it("grey/new when no history", () => expect(trendOf({ price: 90, previous: null })).toBe("new"));
 });
 
 describe("alerts", () => {
-  it("only triggers for selected, in-stock stores at or below target", () => {
-    const p = PRODUCTS[0];
-    const hits = triggeredOffers(p, 10_000_000, ["amazon"]);
-    expect(hits.every((o) => o.storeId === "amazon" && o.inStock)).toBe(true);
-    expect(triggeredOffers(p, 1, ["amazon"])).toHaveLength(0);
+  const offers = [
+    { storeId: "amazon", price: 900, inStock: true },
+    { storeId: "flipkart", price: 800, inStock: false },
+    { storeId: "croma", price: 1200, inStock: true },
+  ];
+  it("triggers only for selected, in-stock stores at or below target", () => {
+    expect(triggeredOffers(offers, 1000, ["amazon", "flipkart", "croma"]).map((o) => o.storeId)).toEqual(["amazon"]);
+    expect(triggeredOffers(offers, 1000, ["croma"])).toHaveLength(0);
   });
+});
+
+describe("titles", () => {
+  it("strips store branding", () =>
+    expect(cleanTitle("Apple iPhone 16 (128 GB Storage) Online at Best Price On Flipkart.com")).toBe("Apple iPhone 16 (128 GB Storage)"));
 });

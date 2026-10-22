@@ -1,39 +1,62 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useState } from "react";
-import { Check, Plus, Search, Store as StoreIcon } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { ArrowRight, Check, Loader2, Plus, Search, Store as StoreIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { profileQuery, storesQuery, toggleStore } from "@/lib/data";
-import { STORES, bestOffer, inr, searchProducts, storeById } from "@/lib/catalog";
+import { STORES, storeById } from "@/lib/catalog";
+import { searchProducts, type Suggestion } from "@/lib/prices.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
     meta: [
       { title: "CartBrain — Home" },
-      { name: "description", content: "Pick your shopping apps and search any product to compare prices." },
+      { name: "description", content: "Pick your shopping apps and search any product to compare live prices." },
       { property: "og:title", content: "CartBrain — Home" },
-      { property: "og:description", content: "Pick your shopping apps and compare prices instantly." },
+      { property: "og:description", content: "Pick your shopping apps and compare live prices instantly." },
     ],
   }),
   component: Home,
 });
 
+const POPULAR = ["iPhone 16 128GB", "Samsung Galaxy S25", "boAt Airdopes 141", "Sony WH-1000XM5", "Nike running shoes", "Philips air fryer"];
+
 function Home() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const search = useServerFn(searchProducts);
   const { data: profile } = useQuery(profileQuery);
   const { data: stores = [] } = useQuery(storesQuery);
   const [q, setQ] = useState("");
-  const dq = useDeferredValue(q);
-  const results = searchProducts(dq);
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<Suggestion[] | null>(null);
 
   const toggle = async (id: string) => {
     const add = !stores.includes(id);
     qc.setQueryData(storesQuery.queryKey, add ? [...stores, id] : stores.filter((s) => s !== id));
-    try { await toggleStore(id, add); }
-    catch { toast.error("Couldn't update stores"); }
+    try { await toggleStore(id, add); } catch { toast.error("Couldn't update apps"); }
     qc.invalidateQueries({ queryKey: storesQuery.queryKey });
   };
+
+  const run = async (term: string) => {
+    const t = term.trim();
+    if (t.length < 2) return;
+    setQ(t);
+    setBusy(true);
+    try {
+      const r = await search({ data: { q: t } });
+      setResults(r.results);
+      if (r.error) toast.message(r.error);
+    } catch {
+      setResults([{ title: t, storeId: null }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const open = (title: string) => navigate({ to: "/compare", search: { q: title } });
 
   return (
     <div className="space-y-8">
@@ -68,28 +91,40 @@ function Home() {
       </section>
 
       <section>
-        <div className="relative">
+        <form onSubmit={(e) => { e.preventDefault(); run(q); }} className="relative">
           <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products — iPhone, headphones, shoes…"
-            className="w-full rounded-full border border-input bg-card py-3.5 pl-12 pr-4 outline-none focus:border-primary focus:shadow-neon" />
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((p) => {
-            const best = bestOffer(p, stores);
-            return (
-              <Link key={p.id} to="/compare/$productId" params={{ productId: p.id }}
-                className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition hover:border-primary hover:shadow-neon">
-                <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-muted text-3xl">{p.emoji}</span>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.category}</p>
-                  <p className="mt-1 text-sm">{best ? <>From <span className="font-bold text-neon">{inr(best.price)}</span> on {storeById(best.storeId)?.name}</> : <span className="text-muted-foreground">Add apps to see prices</span>}</p>
-                </div>
-              </Link>
-            );
-          })}
-          {results.length === 0 && <p className="text-muted-foreground">No products match "{q}".</p>}
-        </div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search any product — phones, shoes, groceries…" maxLength={120}
+            className="w-full rounded-full border border-input bg-card py-3.5 pl-12 pr-32 outline-none focus:border-primary focus:shadow-neon" />
+          <button disabled={busy || q.trim().length < 2} className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-full bg-neon px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+            {busy ? <Loader2 className="size-4 animate-spin" /> : "Search"}
+          </button>
+        </form>
+
+        {!results && !busy && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {POPULAR.map((p) => (
+              <button key={p} onClick={() => run(p)} className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{p}</button>
+            ))}
+          </div>
+        )}
+
+        {busy && <p className="mt-5 text-sm text-muted-foreground">Searching live across stores…</p>}
+
+        {results && !busy && (
+          <div className="mt-5 space-y-2">
+            <p className="text-sm text-muted-foreground">Pick the exact product to compare:</p>
+            {results.map((r) => (
+              <button key={r.title} onClick={() => open(r.title)}
+                className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-neon">
+                <span>
+                  <span className="font-medium">{r.title}</span>
+                  {r.storeId && <span className="ml-2 text-xs text-muted-foreground">seen on {storeById(r.storeId)?.name}</span>}
+                </span>
+                <ArrowRight className="size-4 shrink-0 text-primary" />
+              </button>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
