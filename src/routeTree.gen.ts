@@ -11,9 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthenticatedCompareRouteImport } from './routes/_authenticated/compare'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedRefundsRouteImport } from './routes/_authenticated/refunds'
-import { Route as AuthenticatedCompareProductIdRouteImport } from './routes/_authenticated/compare.$productId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedCompareRoute = AuthenticatedCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   id: '/home',
@@ -34,45 +39,39 @@ const AuthenticatedRefundsRoute = AuthenticatedRefundsRouteImport.update({
   path: '/refunds',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCompareProductIdRoute =
-  AuthenticatedCompareProductIdRouteImport.update({
-    id: '/compare/$productId',
-    path: '/compare/$productId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compare': typeof AuthenticatedCompareRoute
   '/home': typeof AuthenticatedHomeRoute
   '/refunds': typeof AuthenticatedRefundsRoute
-  '/compare/$productId': typeof AuthenticatedCompareProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compare': typeof AuthenticatedCompareRoute
   '/home': typeof AuthenticatedHomeRoute
   '/refunds': typeof AuthenticatedRefundsRoute
-  '/compare/$productId': typeof AuthenticatedCompareProductIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authenticated/compare': typeof AuthenticatedCompareRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/refunds': typeof AuthenticatedRefundsRoute
-  '/_authenticated/compare/$productId': typeof AuthenticatedCompareProductIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/refunds' | '/compare/$productId'
+  fullPaths: '/' | '/compare' | '/home' | '/refunds'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/refunds' | '/compare/$productId'
+  to: '/' | '/compare' | '/home' | '/refunds'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/compare'
     | '/_authenticated/home'
     | '/_authenticated/refunds'
-    | '/_authenticated/compare/$productId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -96,6 +95,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/compare': {
+      id: '/_authenticated/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof AuthenticatedCompareRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/home': {
       id: '/_authenticated/home'
       path: '/home'
@@ -110,26 +116,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRefundsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/compare/$productId': {
-      id: '/_authenticated/compare/$productId'
-      path: '/compare/$productId'
-      fullPath: '/compare/$productId'
-      preLoaderRoute: typeof AuthenticatedCompareProductIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCompareRoute: typeof AuthenticatedCompareRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedRefundsRoute: typeof AuthenticatedRefundsRoute
-  AuthenticatedCompareProductIdRoute: typeof AuthenticatedCompareProductIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCompareRoute: AuthenticatedCompareRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedRefundsRoute: AuthenticatedRefundsRoute,
-  AuthenticatedCompareProductIdRoute: AuthenticatedCompareProductIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
