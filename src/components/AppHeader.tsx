@@ -5,23 +5,23 @@ import { Bell, Brain, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { alertsQuery, storesQuery } from "@/lib/data";
-import { inr, productById, storeById, triggeredOffers } from "@/lib/catalog";
+import { alertPricesQuery, alertsQuery, storesQuery } from "@/lib/data";
+import { inr, storeById, triggeredOffers } from "@/lib/catalog";
 
 export function AppHeader() {
   const navigate = useNavigate();
   const { data: alerts = [] } = useQuery(alertsQuery);
   const { data: stores = [] } = useQuery(storesQuery);
+  const keys = alerts.map((a) => a.product_id);
+  const { data: prices = {} } = useQuery(alertPricesQuery(keys));
 
   const hits = useMemo(
     () =>
       alerts.flatMap((a) => {
-        const p = productById(a.product_id);
-        if (!p) return [];
-        const offers = triggeredOffers(p, a.target_price, stores);
-        return offers.length ? [{ alert: a, product: p, offers }] : [];
+        const offers = triggeredOffers(prices[a.product_id] ?? [], a.target_price, stores);
+        return offers.length ? [{ alert: a, offers }] : [];
       }),
-    [alerts, stores],
+    [alerts, prices, stores],
   );
 
   const announced = useRef(false);
@@ -29,7 +29,7 @@ export function AppHeader() {
     if (announced.current || hits.length === 0) return;
     announced.current = true;
     const multi = hits.filter((h) => h.offers.length > 1).length;
-    toast.success(`Price drop on ${hits.length} item${hits.length > 1 ? "s" : ""}${multi ? ` — ${multi} across multiple stores` : ""}!`);
+    toast.success(`Price drop on ${hits.length} item${hits.length > 1 ? "s" : ""}${multi ? ` — ${multi} across multiple apps` : ""}!`);
   }, [hits]);
 
   return (
@@ -51,29 +51,31 @@ export function AppHeader() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80">
               <p className="mb-2 font-display font-semibold">Price drop alerts</p>
-              {hits.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{alerts.length ? "No targets hit yet. We'll ping you." : "Set an alert on any product to get notified."}</p>
+              {alerts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Set an alert on any product to get notified.</p>
               ) : (
                 <ul className="space-y-2">
-                  {hits.map((h) => (
-                    <li key={h.alert.id}>
-                      <Link to="/compare/$productId" params={{ productId: h.product.id }} className="block rounded-lg border border-border p-2 hover:border-primary">
-                        <p className="text-sm font-medium">{h.product.emoji} {h.product.name}</p>
-                        <p className="text-xs text-down">
-                          Below {inr(h.alert.target_price)} on {h.offers.map((o) => storeById(o.storeId)?.name).join(", ")}
-                        </p>
-                      </Link>
-                    </li>
-                  ))}
+                  {alerts.map((a) => {
+                    const h = hits.find((x) => x.alert.id === a.id);
+                    return (
+                      <li key={a.id}>
+                        <Link to="/compare" search={{ q: a.product_title ?? a.product_id }} className="block rounded-lg border border-border p-2 hover:border-primary">
+                          <p className="line-clamp-1 text-sm font-medium">{a.product_title ?? a.product_id}</p>
+                          {h ? (
+                            <p className="text-xs text-down">Below {inr(a.target_price)} on {h.offers.map((o) => storeById(o.storeId)?.name).join(", ")}</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Waiting for {inr(a.target_price)}</p>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </PopoverContent>
           </Popover>
-          <button
-            aria-label="Sign out"
-            className="rounded-full p-2 hover:bg-accent"
-            onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}
-          >
+          <button aria-label="Sign out" className="rounded-full p-2 hover:bg-accent"
+            onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
             <LogOut className="size-5" />
           </button>
         </nav>

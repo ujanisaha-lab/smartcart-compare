@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           product_id: string
+          product_title: string | null
           target_price: number
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           product_id: string
+          product_title?: string | null
           target_price: number
           user_id: string
         }
@@ -33,8 +35,48 @@ export type Database = {
           created_at?: string
           id?: string
           product_id?: string
+          product_title?: string | null
           target_price?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      price_snapshots: {
+        Row: {
+          fetched_at: string
+          id: string
+          image: string | null
+          in_stock: boolean
+          mrp: number | null
+          price: number | null
+          query_key: string
+          store_id: string
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          image?: string | null
+          in_stock?: boolean
+          mrp?: number | null
+          price?: number | null
+          query_key: string
+          store_id: string
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          image?: string | null
+          in_stock?: boolean
+          mrp?: number | null
+          price?: number | null
+          query_key?: string
+          store_id?: string
+          title?: string | null
+          url?: string | null
         }
         Relationships: []
       }
@@ -53,6 +95,24 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+        }
+        Relationships: []
+      }
+      search_cache: {
+        Row: {
+          fetched_at: string
+          query_key: string
+          results: Json
+        }
+        Insert: {
+          fetched_at?: string
+          query_key: string
+          results: Json
+        }
+        Update: {
+          fetched_at?: string
+          query_key?: string
+          results?: Json
         }
         Relationships: []
       }
