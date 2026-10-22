@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Product/store catalog lives in src/lib/catalog.ts as deterministic demo data; swap for a real price feed behind the same shape.
+- User data (profiles, user_stores, price_alerts) is in Lovable Cloud with per-user RLS; queries are in src/lib/data.ts.
